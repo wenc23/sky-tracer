@@ -1,0 +1,30 @@
+# Sky Tracer 光影包选项
+
+screen=设置
+option.SKY_EXPOSURE=天空曝光
+option.SKY_EXPOSURE.comment=在标定的 0.10 显示曝光基础上的倍数。
+value.SKY_EXPOSURE.0.5=0.5 倍
+value.SKY_EXPOSURE.0.75=0.75 倍
+value.SKY_EXPOSURE.1.0=1.0 倍（默认）
+value.SKY_EXPOSURE.1.5=1.5 倍
+value.SKY_EXPOSURE.2.0=2.0 倍
+value.SKY_EXPOSURE.3.0=3.0 倍
+value.SKY_EXPOSURE.4.0=4.0 倍
+option.SKY_NIGHT_GAIN=夜空增益
+option.SKY_NIGHT_GAIN.comment=对物理夜空的人为增益。该大气模型不包含月亮、星空和气辉。
+value.SKY_NIGHT_GAIN.1.0=物理值（默认）
+value.SKY_NIGHT_GAIN.2.0=2 倍
+value.SKY_NIGHT_GAIN.4.0=4 倍
+value.SKY_NIGHT_GAIN.8.0=8 倍
+option.SKY_SUN_DISK=太阳圆盘
+option.SKY_SUN_DISK.comment=绘制太阳圆盘并按穿越大气后的透射率着色；角径由“太阳圆盘大小”控制。
+option.SKY_SUN_SIZE=太阳圆盘大小
+option.SKY_SUN_SIZE.comment=相对物理太阳（0.53°）的倍数。Minecraft 原本的太阳更大、更风格化。
+value.SKY_SUN_SIZE.1.0=物理值（0.53°）
+value.SKY_SUN_SIZE.2.0=2 倍
+value.SKY_SUN_SIZE.3.0=3 倍
+value.SKY_SUN_SIZE.4.0=4 倍（默认）
+value.SKY_SUN_SIZE.6.0=6 倍
+value.SKY_SUN_SIZE.8.0=8 倍
+option.SKY_RAIN_DIMMING=降雨变暗
+option.SKY_RAIN_DIMMING.comment=降雨时压暗晴朗大气模型。属于艺术处理：预计算介质为晴空。

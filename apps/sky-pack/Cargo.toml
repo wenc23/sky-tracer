@@ -1,0 +1,23 @@
+﻿[package]
+name = "sky-pack"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Bake the four-wave realtime atmosphere into an Iris/OptiFine sky shader pack"
+
+[dependencies]
+bytemuck.workspace = true
+clap.workspace = true
+glam.workspace = true
+image.workspace = true
+pollster.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+wgpu.workspace = true
+winit.workspace = true
+sky-realtime = { path = "../../crates/sky-realtime" }
+# Offline validation harness: real OpenGL compatibility context so the shipped
+# `#version 330 compatibility` shader sources are compiled unmodified.
+glow = "0.17.0"
+raw-window-handle = "0.6"
+

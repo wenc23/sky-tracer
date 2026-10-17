@@ -1,0 +1,30 @@
+# Sky Tracer shader pack options
+
+screen=Settings
+option.SKY_EXPOSURE=Sky Exposure
+option.SKY_EXPOSURE.comment=Exposure multiplier on the calibrated 0.10 display baseline.
+value.SKY_EXPOSURE.0.5=0.5x
+value.SKY_EXPOSURE.0.75=0.75x
+value.SKY_EXPOSURE.1.0=1.0x (default)
+value.SKY_EXPOSURE.1.5=1.5x
+value.SKY_EXPOSURE.2.0=2.0x
+value.SKY_EXPOSURE.3.0=3.0x
+value.SKY_EXPOSURE.4.0=4.0x
+option.SKY_NIGHT_GAIN=Night Sky Gain
+option.SKY_NIGHT_GAIN.comment=Artistic gain for the physical night sky. The atmosphere model has no moon, stars or airglow.
+value.SKY_NIGHT_GAIN.1.0=Physical (default)
+value.SKY_NIGHT_GAIN.2.0=2x
+value.SKY_NIGHT_GAIN.4.0=4x
+value.SKY_NIGHT_GAIN.8.0=8x
+option.SKY_SUN_DISK=Solar Disk
+option.SKY_SUN_DISK.comment=Draw the solar disk with its transit transmittance. Its angular size is set by SKY_SUN_SIZE.
+option.SKY_SUN_SIZE=Solar Disk Size
+option.SKY_SUN_SIZE.comment=Size relative to the physical 0.53 degrees. Minecraft's own sun is stylized much larger.
+value.SKY_SUN_SIZE.1.0=Physical (0.53 degrees)
+value.SKY_SUN_SIZE.2.0=2x
+value.SKY_SUN_SIZE.3.0=3x
+value.SKY_SUN_SIZE.4.0=4x (default)
+value.SKY_SUN_SIZE.6.0=6x
+value.SKY_SUN_SIZE.8.0=8x
+option.SKY_RAIN_DIMMING=Rain Dimming
+option.SKY_RAIN_DIMMING.comment=Dim the clear-sky model while it rains. Artistic: the baked medium is clear-sky.

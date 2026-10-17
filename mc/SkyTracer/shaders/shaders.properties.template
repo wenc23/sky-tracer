@@ -1,0 +1,29 @@
+﻿# Sky Tracer shader pack settings.
+# Generated from mc/SkyTracer/shaders/shaders.properties.template by
+# `cargo run -p sky-pack -- bake`; @TOKENS@ are replaced with baked table sizes.
+
+# Only the sky is replaced. Vanilla geometry rendering, lighting and fog stay
+# untouched, so the pack is a drop-in atmosphere replacement.
+sun=false
+moon=false
+clouds=off
+underwaterOverlay=false
+vignette=false
+
+# Make rain and beacon beams write depth so the composite pass keeps them
+# instead of overwriting them with the sky.
+rain.depth=true
+beacon.beam.depth=true
+
+# The observer SkyView is rebuilt into a fixed 256x256 buffer, not a
+# screen-sized one.
+size.buffer.colortex5=@LUT_SIZE@ @LUT_SIZE@
+
+# Baked fixed-medium tables (raw textures, stage-bound sampler overrides).
+texture.deferred.colortex4=textures/tau.bin TEXTURE_2D RGBA16F @TAU_WIDTH@ @TAU_HEIGHT@ RGBA HALF_FLOAT
+texture.deferred.colortex6=textures/atlas.bin TEXTURE_2D RGBA32F @ATLAS_WIDTH@ @ATLAS_ROWS@ RGBA FLOAT
+texture.deferred.colortex7=textures/source.bin TEXTURE_2D RGBA16F @SOURCE_WIDTH@ @SOURCE_HEIGHT@ RGBA HALF_FLOAT
+texture.composite.colortex4=textures/tau.bin TEXTURE_2D RGBA16F @TAU_WIDTH@ @TAU_HEIGHT@ RGBA HALF_FLOAT
+
+screen=SKY_EXPOSURE SKY_NIGHT_GAIN SKY_SUN_DISK SKY_SUN_SIZE SKY_RAIN_DIMMING
+

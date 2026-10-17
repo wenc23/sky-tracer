@@ -104,6 +104,22 @@ target/release/sky-baker.exe reference sampling-study --out out/teacher-study.js
 
 命令先求较密积分对照，再测指定候选，保存每阶墙钟、固定物理查询的辐亮度、差异分位数和暗部绝对差。`--only` 支持分别扫描 ray、angular、sun、tau 和 orders；`--optical-depth` 可改变共享辅助表网格。完整参考的 GPU 工作集远大于这些小表，不得直接把秒数按状态数量外推。取舍与已测参数在[数值精度与数据分配](numerics.md#采样预算与烘焙时间)中。
 
+环境光照资产导出（供外部渲染器消费的冻结边界）：
+
+```powershell
+# 全向线性 sRGB 辐亮度 + 大气衰减太阳辐照度；太阳盘按覆盖率叠加进辐亮度场。
+target/release/sky-environment.exe --out out/env_noon --width 1024 --height 512 --sun-elevation-deg 35 --sun-azimuth-deg 30 --altitude-km 0.2
+# 可选参数：--steps（SkyView 运行步数，默认 DEFAULT_RUNTIME_STEPS）、--aerosol-scale、
+# --ground-albedo、--sun-angular-radius-deg、--sun-super-samples、--config/--wavelengths。
+```
+
+输出 `environment.json`（溯源、方向/色彩约定、太阳元数据、求解报告、FNV-1a 校验和）、
+`radiance.f32`（rgb32f LE、行主序、等距柱状；第 0 行 +Y，经度 0 朝 +Z）与仅供目视的
+`preview.png`。应用只做求解调用、色彩换算与序列化；大气输运仍归 `sky-realtime`。
+该资产是**冻结远场边界**（单观察海拔、单太阳位姿），不包含消费场景内的大气输运；
+1024×512 下 0.53° 太阳盘约 1.5 个 texel，需要更精细的盘时提高分辨率。
+本机（AMD 8060S 核显 / Vulkan）一次导出：启动求解约 2.5 s，投影/回读/换算 <15 ms。
+
 CPU 合成与参考显示转换：
 
 ```powershell

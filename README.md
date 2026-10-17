@@ -13,6 +13,7 @@
 |[实时方案与压缩取舍](docs/realtime.md)|当前配置、性能、质量边界，以及 BC6H、低秩和球谐的实验结论。|
 |[研究与复现指南](docs/research.md)|代码边界、数据格式、实验流程和可运行命令。|
 |[云路径追踪参考](docs/clouds.md)|Disney VDB、无偏估计器、稀疏加速、统计输出与运行方式。|
+|[把天空搬进 Minecraft](docs/minecraft.md)|光影包烘焙了什么、GLSL 与求解器如何对应、离线与实机验证结果和边界。|
 
 不熟悉图形学时，先读第一篇，再运行 demo。其余文档按关注点查阅。
 
@@ -31,6 +32,10 @@ apps/
   sky-audit/       固定场景评估、缓存与输运恒等式检查
   sky-optimizer/   Python / CPU 波长搜索、候选比较和图集
   cloud-demo/      全帧云 PT + 实时天空、参数 UI/移动相机、离线 EXR 与资产分析
+  sky-environment/ 导出冻结的环境光照资产（全向辐亮度 + 太阳信息，供外部渲染器消费）
+  sky-pack/        把实时求解结果烘焙成 Minecraft 光影包，并做离线 GLSL/输运验证
+mc/
+  SkyTracer/       Iris/OptiFine 光影包源；纹理表与常量由 sky-pack 生成
 experiments/
   validation/     已纳入版本管理的相机与掠角回归场景
 scripts/          架构检查与通用二进制图像对比
@@ -54,6 +59,12 @@ cargo run --release -p sky-demo -- --asset out/pt_noon_085/asset.json
 cargo run --release -p sky-baker -- pt --width 32 --height 16 --spp 64 --out out/pt-smoke
 # 只检查完整参考的资源预算，不启动烘焙。
 cargo run --release -p sky-baker -- reference plan
+# 导出冻结环境光照资产（全向线性 sRGB 辐亮度 + 太阳辐照度，供外部渲染器消费）。
+cargo run --release -p sky-environment -- --out out/env_noon --sun-elevation-deg 35 --sun-azimuth-deg 30
+# 把实时求解结果烘焙成 Minecraft 光影包（写到 out/shaderpacks/SkyTracer 与同名 zip）。
+cargo run --release -p sky-pack -- bake
+# 不启动游戏，用本机 OpenGL 编译包内 GLSL，并与逐像素输运对照。
+cargo run --release -p sky-pack -- preview
 ```
 
 完整教师 LUT 使用 safetensors，按含容器头和元数据预留的上界约 **19.001 GB**，新烘焙硬上限为 **20 GB（20,000,000,000 字节）**。它不是首次运行的前提。实时算法不加载这份资源，常驻计算载荷约 **7.910 MiB**。已有二进制资源继续可读；使用参考显示时显式选择：

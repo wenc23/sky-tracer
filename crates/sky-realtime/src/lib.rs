@@ -125,7 +125,7 @@ impl Default for Config {
 }
 impl Config {
     /// Performance-first preset, validated against dense convergence probes.
-    /// Retains eight transport iterations and a 256² SkyView for twilight detail.
+    /// Retains eight transport iterations and a 256虏 SkyView for twilight detail.
     pub fn balanced() -> Self {
         Self {
             heights: 40,
@@ -625,6 +625,74 @@ struct FrameKey {
     segment: f32,
     spectral: bool,
     environment: bool,
+}
+
+/// CPU-side fixed-medium tables for an external runtime that re-implements the
+/// four-wave transport with the exported field textures. Everything here is
+/// already owned by the crate's physical medium; no transport is duplicated.
+#[derive(Clone, Debug, Serialize)]
+pub struct PackTables {
+    /// `[heights, suns, optical_rows, optical_columns]` from the solver params.
+    pub dims: [u32; 4],
+    /// Directional source phase nodes (Config::phases).
+    pub phase_nodes: u32,
+    /// Directional source cone nodes (Config::cones).
+    pub cone_nodes: u32,
+    /// Low-sky height nodes in km (`dims[0]` entries).
+    pub heights: Vec<f32>,
+    /// Height-node profile, `profile_nodes * 7` entries:
+    /// `row 0 = altitude`, `row 1 = extinction`, `rows 2..7 = scattering[0..5]`.
+    pub profile: Vec<[f32; 4]>,
+    /// Tabulated phase, `species * 1024 + bin`; four spectral lanes per entry.
+    pub phase: Vec<[f32; 4]>,
+    /// Per-height solar-coordinate fit, `heights * 4` entries.
+    pub solar: Vec<[f32; 4]>,
+    /// Number of height nodes with aerosols (<= 35 km).
+    pub low_count: u32,
+    /// Profile node count.
+    pub profile_nodes: u32,
+    /// Coordinate ablation mask; the pack bakes the fitted mapping (`63`).
+    pub mapping_flags: u32,
+    /// `[fitted_phase_weight, fitted_cone_warp, 0, 0]`.
+    pub angular_mapping: [f32; 4],
+    /// Per-band solar irradiance (`W m^-2 nm^-1`).
+    pub solar_irradiance: [f32; 4],
+    /// Rec.2020 conversion weights, one row per spectral lane.
+    pub rgb: [[f32; 3]; 4],
+    pub top_height_km: f32,
+    pub ground_radius_km: f32,
+    pub sun_radius_rad: f32,
+    pub optical_segments: [[f32; 4]; 6],
+    pub runtime_steps: u32,
+    /// Path-step concentration scale used by the runtime integrator.
+    pub path_height_scale: f32,
+}
+
+/// One field texture read back from the solver, tightly packed little-endian
+/// texels in the solver's own storage format (`f16` RGBA or `f32` RGBA).
+#[derive(Clone, Debug, Serialize)]
+pub struct PackTexture {
+    pub width: u32,
+    pub height: u32,
+    /// Bytes per texel: 8 for RGBA16F, 16 for RGBA32F.
+    pub bytes_per_texel: u32,
+    pub bytes: Vec<u8>,
+}
+
+/// Fixed-medium solver output required by an external four-wave runtime.
+#[derive(Clone, Debug, Serialize)]
+pub struct PackExport {
+    pub tables: PackTables,
+    /// Optical depth to the atmosphere top, RGBA16F, `[optical columns, rows]`.
+    pub optical_depth: PackTexture,
+    /// Directional multiple-scattering source, RGBA16F.
+    pub source: PackTexture,
+    /// Log incident mean, RGBA32F.
+    pub mean: PackTexture,
+    /// Exact high-altitude Rayleigh moments, RGBA32F.
+    pub high: PackTexture,
+    /// Ground irradiance, RGBA32F, one row.
+    pub ground: PackTexture,
 }
 
 pub struct Renderer {
@@ -1383,6 +1451,85 @@ impl Renderer {
     /// iteration deltas without retaining any temporary incident ray fields.
     pub fn export_source(&self, d: &wgpu::Device, q: &wgpu::Queue) -> Result<Vec<u8>> {
         read_texture(d, q, &self.field.as_ref().ok_or("not solved")?.source, 8)
+    }
+    /// Fixed-medium tables for an external runtime that re-implements the
+    /// runtime transport (`transport.wgsl` / `solver.wgsl` lookups) itself.
+    /// Reads only data the solver already keeps resident.
+    pub fn pack_tables(&self) -> PackTables {
+        let p = &self.medium.params;
+        let heights: Vec<f32> = (0..p.dims[0] as usize)
+            .map(|i| self.medium.data[i][0])
+            .collect();
+        let profile_offset = p.offsets0[2] as usize;
+        let profile_nodes = p.offsets1[2] as usize;
+        let profile: Vec<[f32; 4]> =
+            self.medium.data[profile_offset..profile_offset + profile_nodes * 7].to_vec();
+        let phase_offset = p.offsets0[3] as usize;
+        let phase: Vec<[f32; 4]> = self.medium.data[phase_offset..phase_offset + 4096].to_vec();
+        let solar_offset = p.mapping[1] as usize;
+        let solar: Vec<[f32; 4]> =
+            self.medium.data[solar_offset..solar_offset + heights.len() * 4].to_vec();
+        PackTables {
+            dims: p.dims,
+            phase_nodes: self.config.phases,
+            cone_nodes: self.config.cones,
+            low_count: p.offsets1[1],
+            profile_nodes: profile_nodes as u32,
+            mapping_flags: p.mapping[0],
+            angular_mapping: p.angular_mapping,
+            solar_irradiance: p.solar,
+            rgb: std::array::from_fn(|k| [p.rgb[k][0], p.rgb[k][1], p.rgb[k][2]]),
+            top_height_km: p.medium[0],
+            ground_radius_km: p.sun[3],
+            sun_radius_rad: p.sun[2],
+            optical_segments: p.optical_segments,
+            runtime_steps: self.steps.clamp(4, 512),
+            path_height_scale: self.config.path_height_scale,
+            heights,
+            profile,
+            phase,
+            solar,
+        }
+    }
+    /// Read the solved fixed-medium fields back for external runtimes.
+    /// Requires `rebuild` to have produced the field.
+    pub fn export_pack(&self, d: &wgpu::Device, q: &wgpu::Queue) -> Result<PackExport> {
+        let field = self.field.as_ref().ok_or("not solved")?;
+        let c = &self.config;
+        let low = self.medium.params.offsets1[1];
+        Ok(PackExport {
+            tables: self.pack_tables(),
+            optical_depth: PackTexture {
+                width: c.optical[1],
+                height: c.optical[0],
+                bytes_per_texel: 8,
+                bytes: read_texture(d, q, &self._tau, 8)?,
+            },
+            source: PackTexture {
+                width: c.suns * c.phases,
+                height: low * c.cones,
+                bytes_per_texel: 8,
+                bytes: read_texture(d, q, &field.source, 8)?,
+            },
+            mean: PackTexture {
+                width: c.suns,
+                height: c.heights,
+                bytes_per_texel: 16,
+                bytes: read_texture(d, q, &field._mean, 16)?,
+            },
+            high: PackTexture {
+                width: c.suns * 5,
+                height: c.heights - low + 1,
+                bytes_per_texel: 16,
+                bytes: read_texture(d, q, &field._high, 16)?,
+            },
+            ground: PackTexture {
+                width: c.suns,
+                height: 1,
+                bytes_per_texel: 16,
+                bytes: read_texture(d, q, &field._ground, 16)?,
+            },
+        })
     }
 }
 /// Conservative full-frustum test, including pixels beyond their centers.

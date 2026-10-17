@@ -2533,6 +2533,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "sky-environment"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "clap",
+ "image",
+ "pollster",
+ "serde_json",
+ "sky-realtime",
+ "wgpu",
+]
+
+[[package]]
+name = "sky-pack"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "clap",
+ "glam",
+ "glow",
+ "image",
+ "pollster",
+ "raw-window-handle",
+ "serde",
+ "serde_json",
+ "sky-realtime",
+ "wgpu",
+ "winit",
+]
+
+[[package]]
 name = "sky-pt"
 version = "0.1.0"
 dependencies = [

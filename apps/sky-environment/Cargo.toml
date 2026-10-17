@@ -1,0 +1,15 @@
+[package]
+name = "sky-environment"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bytemuck = { workspace = true }
+clap = { workspace = true }
+image = { workspace = true }
+pollster = { workspace = true }
+serde_json = { workspace = true }
+wgpu = { workspace = true }
+
+sky-realtime = { path = "../../crates/sky-realtime" }
