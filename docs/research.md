@@ -189,6 +189,47 @@ python apps/sky-optimizer/compare_sky_sequences_cpu.py out/sky-coordinates-motio
 
 多散射源需要单独处理。沿一条观察射线的 `total−single−boundary` 不是局部源；完整教师的方向辐亮度与已知局部散射系数/相函数可以通过角向卷积恢复该源，再得到归一化源、均值与高空矩。也可以恢复当前实时场的完整导出和 CPU 采样器，做网格误差诊断。本轮先优化更新频率高的 SkyView，保留源场的高度/太阳/相位/绕轴坐标；没有把终端辐亮度差伪装成源场数据。
 
+## 天气与实时云
+
+`sky-weather` 是独立的行为优先天气核心；`sky-weather-fx` 是独立的屏幕空间天气效果核心；`sky-clouds` 是独立的 wgpu 实时云输运核心。它们不依赖大气核心，也不互相依赖；`sky-demo --experiment weather` 与独立入口 `sky-weather-workbench` 在应用层组合它们与 `sky-realtime`。后者复用 `sky-demo` 的显示外壳，只负责参数、展示与截图，不改变核心边界。行为目录、近似边界和已知差距见[行为优先天气](weather.md)与[实时天气效果](weather_fx.md)。
+
+```powershell
+# 天气/云实时可视化工作台（中文界面；默认自动天气，配置在窗口右侧「设置面板」）
+target/release/sky-weather-workbench.exe
+# 固定天气工作台（--kind 在 auto 模式下隐含 fixed）
+target/release/sky-weather-workbench.exe --mode fixed --kind thunderstorm
+# 冒烟截图：无人工操作，离屏渲染真实管线 + UI 后写 PNG 并自动退出
+target/release/sky-weather-workbench.exe --smoke 24 --warmup-seconds 120 --screenshot out/workbench-weather-smoke.png --width 1600 --height 900
+# 交互天气实验（Auto 自动演变；UI 可切目录/气候/速度/质量）
+target/release/sky-demo.exe --experiment weather
+# 无窗口天气快照（不要求 PT asset）
+target/release/sky-demo.exe --experiment weather --snapshot out/weather.png --snapshot-pitch-deg 20
+# 20 种天气目录；输出 frame/effects/volume/finite
+target/release/cloud-audit.exe weather-catalog --out out/weather-catalog --seconds 120
+# Auto 演变/转换记录
+target/release/cloud-audit.exe weather-simulate --climate temperate --hours 6 --out out/weather-auto
+# CPU 步进/体积采样基准
+target/release/cloud-audit.exe benchmark --out out/weather-benchmark
+# 无窗口 GPU 云图；--zero-density 检查零密度是否逐像素还原背景
+target/release/cloud-audit.exe render-cloud --kind rain --out out/cloud-preview
+target/release/cloud-audit.exe render-cloud --zero-density --out out/cloud-zero --width 160 --height 90
+# GPU 天气效果零输入恒等式
+target/release/cloud-audit.exe effects-zero --out out/effects-zero --size 64
+```
+
+天气/云测试：
+
+```powershell
+cargo test -p sky-weather
+cargo test -p sky-weather-fx
+cargo test -p sky-clouds
+cargo test -p sky-weather-workbench
+cargo check --workspace --all-targets
+python scripts/check_architecture.py
+```
+
+`weather-catalog`/`weather-simulate`/`benchmark` 只做 CPU 行为计算与 JSON 输出；`render-cloud`/`effects-zero`、工作台与冒烟截图创建 wgpu 设备，必须与烘焙/其他 GPU 工作串行运行。天气效果是风格化屏幕空间层，不是物理输运；当前未做 1080p 长时性能、全部目录自动截图对比或真实数据驱动。工作台的选项、HUD 与本机实测见[行为优先天气](weather.md#可视化工作台实时)。
+
 ## 产物约定
 
 |产物|内容和解释|

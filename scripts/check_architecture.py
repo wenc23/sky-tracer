@@ -5,7 +5,10 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 ATMOSPHERE_CORES = {"sky-pt", "sky-reference", "sky-realtime"}
-CORES = ATMOSPHERE_CORES | {"cloud-pt"}
+# Independent transport/simulation cores. sky-weather is CPU-only; sky-clouds
+# and sky-weather-fx own the real-time visual shaders. None may import another
+# solver crate.
+CORES = ATMOSPHERE_CORES | {"cloud-pt", "sky-weather", "sky-clouds", "sky-weather-fx"}
 TABLES = {"atmosphere_profile.csv", "aerosol_profile.csv", "aerosol_optics.csv",
           "mie_phase.csv", "bands.csv", "CIE_xyz_1931_2deg.csv"}
 workspace = tomllib.loads((ROOT / "Cargo.toml").read_text())
@@ -28,7 +31,9 @@ for name in sorted(CORES):
         for other in (CORES | {'sky-assets'}) - {name}:
             assert other.replace('-', '_') + '::' not in text, (path, other)
         assert not re.search(r'(?:include_str!|include_bytes!)\([^\n]*out[/\\]', text), path
-    print(f"{name}: independent crate" + (" and owned tables" if name in ATMOSPHERE_CORES else " and VDB transport"))
+    if name == "sky-weather":
+        assert "wgpu" not in manifest.get("dependencies", {}), "weather core must stay CPU-only"
+    print(f"{name}: independent crate" + (" and owned tables" if name in ATMOSPHERE_CORES else ""))
 assert not (ROOT / "data").exists(), "No shared root input directory"
 for path in (ROOT / "apps").rglob("*.wgsl"):
     display = path.parent.name == "shaders" and path.name in {

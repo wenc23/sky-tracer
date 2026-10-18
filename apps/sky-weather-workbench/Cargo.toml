@@ -1,0 +1,13 @@
+[package]
+name = "sky-weather-workbench"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "sky-weather-workbench"
+path = "src/main.rs"
+
+[dependencies]
+clap = { workspace = true }
+sky-demo = { path = "../sky-demo" }

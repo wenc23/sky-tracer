@@ -11,14 +11,64 @@ use crate::{
 };
 use std::{error::Error, path::Path, sync::mpsc};
 
+#[derive(Clone, Debug, Default)]
+pub struct WeatherSnapshotOptions {
+    pub mode: Option<String>,
+    pub kind: Option<String>,
+    pub climate: Option<String>,
+    pub seed: Option<u64>,
+    pub spinup_s: f64,
+}
+
+fn parse_weather_kind(name: &str) -> Option<sky_weather::WeatherKind> {
+    use sky_weather::WeatherKind as W;
+    Some(match name {
+        "clear" => W::Clear,
+        "fair" => W::Fair,
+        "partly_cloudy" => W::PartlyCloudy,
+        "overcast" => W::Overcast,
+        "fog" => W::Fog,
+        "haze" => W::Haze,
+        "dust" => W::Dust,
+        "drizzle" => W::Drizzle,
+        "rain" => W::Rain,
+        "heavy_rain" => W::HeavyRain,
+        "tropical_shower" => W::TropicalShower,
+        "thunderstorm" => W::Thunderstorm,
+        "hailstorm" => W::Hailstorm,
+        "supercell" => W::Supercell,
+        "light_snow" => W::LightSnow,
+        "heavy_snow" => W::HeavySnow,
+        "blizzard" => W::Blizzard,
+        "sleet" => W::Sleet,
+        "freezing_rain" => W::FreezingRain,
+        "gale" => W::Gale,
+        _ => return None,
+    })
+}
+
+fn parse_weather_climate(name: &str) -> Option<sky_weather::Climate> {
+    use sky_weather::Climate as C;
+    Some(match name {
+        "tropical" => C::Tropical,
+        "temperate" => C::Temperate,
+        "continental" => C::Continental,
+        "arid" => C::Arid,
+        "polar" => C::Polar,
+        "alpine" => C::Alpine,
+        _ => return None,
+    })
+}
+
 pub fn render(
-    reference_path: &Path,
+    reference_path: Option<&Path>,
     lut_path: &Path,
     output_path: &Path,
     kind: crate::app::ExperimentKind,
     linear: bool,
     view: [f32; 4],
     benchmark_frames: usize,
+    weather_options: &WeatherSnapshotOptions,
 ) -> Result<(), Box<dyn Error>> {
     if view.iter().any(|v| !v.is_finite())
         || !(-90.0..=90.0).contains(&view[1])
@@ -27,7 +77,10 @@ pub fn render(
     {
         return Err("invalid snapshot camera".into());
     }
-    let asset = RealtimeAsset::load(reference_path)?;
+    let asset = match reference_path {
+        Some(path) => RealtimeAsset::load(path)?,
+        None => RealtimeAsset::demo_default(),
+    };
     let benchmark_features = if benchmark_frames > 0 {
         wgpu::Features::TIMESTAMP_QUERY | wgpu::Features::TIMESTAMP_QUERY_INSIDE_ENCODERS
     } else {
@@ -49,6 +102,95 @@ pub fn render(
         asset: &asset,
         display: DisplayTransform::default(),
     };
+    if matches!(kind, crate::app::ExperimentKind::Weather) {
+        let width = 512u32;
+        let height = 384u32;
+        let target = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("weather snapshot"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        let target_view = target.create_view(&Default::default());
+        let mut experiment =
+            crate::passes::weather::WeatherExperiment::new(init).map_err(std::io::Error::other)?;
+        experiment.set_linear_output(linear);
+        let mut controls = RealtimeControls::from_asset(&asset);
+        controls.view.yaw_deg = view[0];
+        controls.view.pitch_deg = view[1];
+        controls.view.fov_y_deg = view[2];
+        controls.exposure_ev = view[3];
+        if let Some(mode) = weather_options.mode.as_deref() {
+            controls.weather_mode = match mode {
+                "auto" => crate::controls::WeatherModeControl::Auto,
+                "fixed" => crate::controls::WeatherModeControl::Fixed,
+                "tour" => crate::controls::WeatherModeControl::Tour,
+                _ => return Err(format!("unknown weather mode {mode:?}").into()),
+            };
+        }
+        if let Some(kind) = weather_options.kind.as_deref() {
+            controls.weather_kind =
+                parse_weather_kind(kind).ok_or_else(|| format!("unknown weather kind {kind:?}"))?;
+            if controls.weather_mode == crate::controls::WeatherModeControl::Auto {
+                controls.weather_mode = crate::controls::WeatherModeControl::Fixed;
+            }
+        }
+        if let Some(climate) = weather_options.climate.as_deref() {
+            controls.weather_climate = parse_weather_climate(climate)
+                .ok_or_else(|| format!("unknown climate {climate:?}"))?;
+        }
+        if let Some(seed) = weather_options.seed {
+            controls.weather_seed = seed;
+        }
+        experiment
+            .configure_weather(controls)
+            .map_err(std::io::Error::other)?;
+        experiment
+            .spin_up_weather(weather_options.spinup_s)
+            .map_err(std::io::Error::other)?;
+        experiment.update(UpdateContext {
+            controls: &controls,
+        });
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("weather snapshot encoder"),
+        });
+        experiment.render(FrameContext {
+            device,
+            queue,
+            encoder: &mut encoder,
+            target: &target_view,
+            viewport: SurfaceViewport {
+                x: 0,
+                y: 0,
+                width,
+                height,
+            },
+        });
+        queue.submit([encoder.finish()]);
+        let pixel_bytes = if linear { 16 } else { 4 };
+        let bytes = sky_realtime::read_texture(device, queue, &target, pixel_bytes)
+            .map_err(std::io::Error::other)?;
+        if linear {
+            std::fs::write(output_path, &bytes)?;
+        } else {
+            image::save_buffer(output_path, &bytes, width, height, image::ColorType::Rgba8)?;
+        }
+        println!(
+            "weather snapshot written to {} ({}x{}, linear={linear})",
+            output_path.display(),
+            width,
+            height
+        );
+        return Ok(());
+    }
     let mut experiment: Box<dyn RealtimeExperiment> = match kind {
         crate::app::ExperimentKind::Hybrid4d => Box::new(
             crate::passes::hybrid::HybridExperiment::new(init).map_err(std::io::Error::other)?,
@@ -56,6 +198,7 @@ pub fn render(
         crate::app::ExperimentKind::OfflineLut => {
             Box::new(OfflineLutExperiment::new(init, lut_path).map_err(std::io::Error::other)?)
         }
+        crate::app::ExperimentKind::Weather => unreachable!("weather handled above"),
     };
     experiment.set_linear_output(linear);
     let mut controls = RealtimeControls::from_asset(&asset);

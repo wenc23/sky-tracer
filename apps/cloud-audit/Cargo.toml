@@ -1,0 +1,19 @@
+[package]
+name = "cloud-audit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+bytemuck = { workspace = true }
+clap = { workspace = true }
+exr = { workspace = true }
+glam = { workspace = true }
+image = { workspace = true }
+pollster = { workspace = true }
+serde_json = { workspace = true }
+wgpu = { workspace = true }
+cloud-pt = { path = "../../crates/cloud-pt" }
+sky-clouds = { path = "../../crates/sky-clouds" }
+sky-weather = { path = "../../crates/sky-weather" }
+sky-weather-fx = { path = "../../crates/sky-weather-fx" }

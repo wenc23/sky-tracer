@@ -57,6 +57,11 @@ impl GpuContext {
             .map_err(|error| error.to_string())?;
 
         let caps = surface.get_capabilities(&adapter);
+        let info = adapter.get_info();
+        println!(
+            "adapter: {} ({:?}, {:?}, driver {} {})",
+            info.name, info.device_type, info.backend, info.driver, info.driver_info
+        );
         let sdr_format = preferred_sdr_format(&caps.formats)
             .ok_or_else(|| "surface reports no compatible formats".to_owned())?;
         let hdr_format = preferred_hdr_format(&caps.formats);

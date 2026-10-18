@@ -132,7 +132,7 @@ fn world_sun()->vec3<f32>{return vec3<f32>(sin(p.sun.x)*cos(p.sun.y),sin(p.sun.y
     let result=integrate(ray,sun);var light=result.light;var rgb=vec3<f32>(0.0);
     let half_radius=sin(p.sun.z*0.5);
     if (p.size_steps.w&2u)!=0u&&p.medium.z<=0.0&&!ground(p.view.w,ray.y)&&dot(ray-sun,ray-sun)<=4.0*half_radius*half_radius {
-        light+=result.transmittance*p.solar/(4.0*PI*half_radius*half_radius);
+        light+=result.transmittance*p.importance.w*p.solar/(4.0*PI*half_radius*half_radius);
     }
     for(var i=0u;i<4u;i++){rgb+=light[i]*p.rgb[i].xyz;}
     var value=vec4<f32>(rgb,1.0);if (p.size_steps.w&4u)!=0u{value=light;}

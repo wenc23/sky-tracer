@@ -419,6 +419,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "cloud-audit"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "clap",
+ "cloud-pt",
+ "exr",
+ "glam",
+ "image",
+ "pollster",
+ "serde_json",
+ "sky-clouds",
+ "sky-weather",
+ "sky-weather-fx",
+ "wgpu",
+]
+
+[[package]]
 name = "cloud-demo"
 version = "0.1.0"
 dependencies = [
@@ -2509,6 +2527,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "sky-clouds"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "glam",
+ "half",
+ "naga",
+ "serde",
+ "serde_json",
+ "wgpu",
+]
+
+[[package]]
 name = "sky-demo"
 version = "0.1.0"
 dependencies = [
@@ -2525,8 +2556,11 @@ dependencies = [
  "rfd",
  "serde_json",
  "sky-assets",
+ "sky-clouds",
  "sky-realtime",
  "sky-reference",
+ "sky-weather",
+ "sky-weather-fx",
  "walkdir",
  "wgpu",
  "winit",
@@ -2596,6 +2630,31 @@ dependencies = [
  "serde",
  "serde_json",
  "wgpu",
+]
+
+[[package]]
+name = "sky-weather"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "sky-weather-fx"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "naga",
+ "wgpu",
+]
+
+[[package]]
+name = "sky-weather-workbench"
+version = "0.1.0"
+dependencies = [
+ "clap",
+ "sky-demo",
 ]
 
 [[package]]

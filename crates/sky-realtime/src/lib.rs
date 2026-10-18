@@ -621,6 +621,7 @@ struct FrameKey {
     view: View,
     sky: SkyKey,
     include_sun: bool,
+    sun_disk_gain_bits: u32,
     sky_view: bool,
     segment: f32,
     spectral: bool,
@@ -724,6 +725,9 @@ pub struct Renderer {
     pub steps: u32,
     pub use_sky_view: bool,
     pub include_sun_disk: bool,
+    /// Scales the visible sun disk radiance (1 = physical, 0 = hidden). Used by
+    /// the weather workbench to fade the disk behind thick cloud decks.
+    pub sun_disk_gain: f32,
     pub multiple_scattering: bool,
     pub segment_km: f32,
     pub spectral_output: bool,
@@ -856,6 +860,7 @@ impl Renderer {
             steps: DEFAULT_RUNTIME_STEPS,
             use_sky_view: true,
             include_sun_disk: false,
+            sun_disk_gain: 1.0,
             multiple_scattering: true,
             segment_km: 0.0,
             spectral_output: false,
@@ -1325,6 +1330,7 @@ impl Renderer {
             view,
             sky,
             include_sun: self.include_sun_disk,
+            sun_disk_gain_bits: self.sun_disk_gain.clamp(0.0, 1.0).to_bits(),
             sky_view: use_sky_view,
             segment: self.segment_km,
             spectral: self.spectral_output,
@@ -1360,6 +1366,7 @@ impl Renderer {
             p.sun[0] = view.sun_azimuth_deg.to_radians();
             p.sun[1] = view.sun_elevation_deg.to_radians();
             p.medium[2] = self.segment_km;
+            p.importance[3] = self.sun_disk_gain.clamp(0.0, 1.0);
             p.sky = [
                 self.config.sky_size,
                 self.config.sky_size,

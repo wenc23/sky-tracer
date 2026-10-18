@@ -166,7 +166,7 @@ cargo run --release -p sky-pack -- preview --sun-elevations 35,2,-6 --width 1920
 |限制|原因 / 现状|
 |---|---|
 |天空由本包决定，地形/水用最小 gbuffers|地形 shader 只做“贴图×顶点色×lightmap + 原版雾”，没有阴影、SSAO、水面效果或物理雾；实体/粒子/手/天气走 Iris 内置回退|
-|没有云、月亮、星空、气辉|介质模型是晴空、单太阳光源；项目本身不包含这些|
+|没有云、月亮、星空、气辉|介质模型是晴空、单太阳光源；实时云只在 `sky-demo --experiment weather` 中实现，尚未进入 Iris/GLSL 包|
 |雨雪不进物理模型|`SKY_RAIN_DIMMING` 只是艺术压暗；`rain.depth=true` 仅用于让雨不被天空覆盖|
 |不写深度的半透明物体可能被天空覆盖|多数粒子、部分天气；这是“在 composite 里画天空”的固有限制|
 |下界/末地保持原版|`dimension != 0` 与水下整帧穿通；只做了离线穿通测试，未实机进维度|

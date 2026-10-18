@@ -2,6 +2,8 @@
 
 `cloud-pt` 是与三个大气求解器互不依赖的云输运 crate。`cloud-demo` 提供渐进 GPU 窗口、CPU/GPU 离线渲染和仅使用 CPU 的资产检查、majorant 成本分析。交互窗口默认组合 `sky-realtime` 的方向天空作为背景和光照边界；云路径内部的大气输运尚未实现。
 
+实时（非路径追踪）云由独立核心 `sky-weather` + `sky-clouds` + `sky-weather-fx` 提供，见[行为优先天气](weather.md)、[实时云输运](clouds_realtime.md)和[实时天气效果](weather_fx.md)。它们与 `cloud-pt` 没有依赖关系；`cloud-pt` 仍是离线统计参考，而不是实时云实现。
+
 第三方编解码库通过 Cargo registry 依赖引入：`blosc-src`（启用 LZ4）、`flate2` 和 `half`。仓库没有复制第三方 Rust crate 源码。VDB 读取器是本项目针对已放入仓库的 Disney 格式实现的窄接口，保留 leaf 的 inactive 值和所有非零 uniform tiles。
 
 ## CPU 检查

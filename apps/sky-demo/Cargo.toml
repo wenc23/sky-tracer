@@ -23,6 +23,9 @@ winit = { workspace = true }
 sky-assets = { path = "../../crates/sky-assets" }
 sky-reference = { path = "../../crates/sky-reference" }
 sky-realtime = { path = "../../crates/sky-realtime" }
+sky-weather = { path = "../../crates/sky-weather" }
+sky-clouds = { path = "../../crates/sky-clouds" }
+sky-weather-fx = { path = "../../crates/sky-weather-fx" }
 
 [dev-dependencies]
 naga = { version = "29.0.3", features = ["wgsl-in"] }

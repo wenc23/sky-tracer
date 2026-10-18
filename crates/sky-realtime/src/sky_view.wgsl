@@ -102,7 +102,7 @@ fn view_transmittance(ray:vec3<f32>)->vec4<f32>{
     let ray=camera_ray(id.xy);let sun=world_sun();
     var rgb=sky_sample(ray);let half_radius=sin(p.sun.z*0.5);
     if (p.size_steps.w&2u)!=0u&&!ground(p.view.w,ray.y)&&dot(ray-sun,ray-sun)<=4.0*half_radius*half_radius {
-        let light=view_transmittance(ray)*p.solar/(4.0*PI*half_radius*half_radius);
+        let light=view_transmittance(ray)*p.importance.w*p.solar/(4.0*PI*half_radius*half_radius);
         for(var k=0u;k<4u;k++){rgb+=light[k]*p.rgb[k].xyz;}
     }
     textureStore(output,vec2<i32>(id.xy),vec4<f32>(rgb,1.0));
